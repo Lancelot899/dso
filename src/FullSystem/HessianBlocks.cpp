@@ -81,12 +81,12 @@ void FrameHessian::setStateZero(Vec10 state_zero)
 
 	for(int i=0;i<6;i++)
 	{
-		Vec6 eps; eps.setZero(); eps[i] = 1e-3;
+        Vec6 eps; eps.setZero(); eps[i] = 1e-3;                     ///< 扰动值
 		SE3 EepsP = Sophus::SE3::exp(eps);
 		SE3 EepsM = Sophus::SE3::exp(-eps);
 		SE3 w2c_leftEps_P_x0 = (get_worldToCam_evalPT() * EepsP) * get_worldToCam_evalPT().inverse();
 		SE3 w2c_leftEps_M_x0 = (get_worldToCam_evalPT() * EepsM) * get_worldToCam_evalPT().inverse();
-		nullspaces_pose.col(i) = (w2c_leftEps_P_x0.log() - w2c_leftEps_M_x0.log())/(2e-3);
+        nullspaces_pose.col(i) = (w2c_leftEps_P_x0.log() - w2c_leftEps_M_x0.log())/(2e-3);    ///< 初始化0空间，原理？
 	}
 	//nullspaces_pose.topRows<3>() *= SCALE_XI_TRANS_INVERSE;
 	//nullspaces_pose.bottomRows<3>() *= SCALE_XI_ROT_INVERSE;

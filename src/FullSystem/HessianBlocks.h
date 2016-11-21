@@ -82,23 +82,25 @@ struct FrameFramePrecalc
 	FrameHessian* target;	// defines column
 
 	// precalc values
-	Mat33f PRE_RTll;
-	Mat33f PRE_KRKiTll;
-	Mat33f PRE_RKiTll;
-	Mat33f PRE_RTll_0;
+    ///< rotation
+    Mat33f PRE_RTll;    ///< leftToLeft = target->PRE_worldToCam * host->PRE_camToWorld
+    Mat33f PRE_KRKiTll; ///< K * PRE_RTll * K.inverse();
+    Mat33f PRE_RKiTll;  ///< PRE_RTll * K.inverse();
+    Mat33f PRE_RTll_0;  ///< target->get_worldToCam_evalPT() * host->get_worldToCam_evalPT().inverse()
 
 	Vec2f PRE_aff_mode;
 	float PRE_b0_mode;
 
-	Vec3f PRE_tTll;
-	Vec3f PRE_KtTll;
-	Vec3f PRE_tTll_0;
+    ///< translation
+    Vec3f PRE_tTll;   ///< leftToLeft = target->PRE_worldToCam * host->PRE_camToWorld
+    Vec3f PRE_KtTll;  ///< K * PRE_tTll
+    Vec3f PRE_tTll_0; ///< target->get_worldToCam_evalPT() * host->get_worldToCam_evalPT().inverse()
 
-	float distanceLL;
+    float distanceLL; ///< PRE_tTll.norm();
 
 
-	inline ~FrameFramePrecalc() {};
-	inline FrameFramePrecalc() {host=target=0;};
+    inline ~FrameFramePrecalc() {}
+    inline FrameFramePrecalc() {host=target=0;}
 	void set(FrameHessian* host, FrameHessian* target, CalibHessian* HCalib);
 };
 
@@ -145,7 +147,7 @@ struct FrameHessian
 	Vec6 nullspaces_scale;
 
 	// variable info.
-	SE3 worldToCam_evalPT;
+    SE3 worldToCam_evalPT;                        ///< 通过setEvalPT_scaled有做初始化
 	Vec10 state_zero;
 	Vec10 state_scaled;
 	Vec10 state;	// [0-5: worldToCam-leftEps. 6-7: a,b]
@@ -154,11 +156,11 @@ struct FrameHessian
 	Vec10 state_backup;
 
 
-	EIGEN_STRONG_INLINE const SE3 &get_worldToCam_evalPT() const {return worldToCam_evalPT;};
-	EIGEN_STRONG_INLINE const Vec10 &get_state_zero() const {return state_zero;};
-	EIGEN_STRONG_INLINE const Vec10 &get_state() const {return state;};
-	EIGEN_STRONG_INLINE const Vec10 &get_state_scaled() const {return state_scaled;};
-	EIGEN_STRONG_INLINE const Vec10 get_state_minus_stateZero() const {return get_state() - get_state_zero();};
+    EIGEN_STRONG_INLINE const SE3 &get_worldToCam_evalPT() const {return worldToCam_evalPT;}
+    EIGEN_STRONG_INLINE const Vec10 &get_state_zero() const {return state_zero;}
+    EIGEN_STRONG_INLINE const Vec10 &get_state() const {return state;}
+    EIGEN_STRONG_INLINE const Vec10 &get_state_scaled() const {return state_scaled;}
+    EIGEN_STRONG_INLINE const Vec10 get_state_minus_stateZero() const {return get_state() - get_state_zero();}
 
 
 	// precalc values
@@ -168,9 +170,9 @@ struct FrameHessian
 	MinimalImageB3* debugImage;
 
 
-	inline Vec6 w2c_leftEps() const {return get_state_scaled().head<6>();};
-	inline AffLight aff_g2l() const {return AffLight(get_state_scaled()[6], get_state_scaled()[7]);};
-	inline AffLight aff_g2l_0() const {return AffLight(get_state_zero()[6]*SCALE_A, get_state_zero()[7]*SCALE_B);};
+    inline Vec6 w2c_leftEps() const {return get_state_scaled().head<6>();}
+    inline AffLight aff_g2l() const {return AffLight(get_state_scaled()[6], get_state_scaled()[7]);}
+    inline AffLight aff_g2l_0() const {return AffLight(get_state_zero()[6]*SCALE_A, get_state_zero()[7]*SCALE_B);}
 
 
 
@@ -201,7 +203,7 @@ struct FrameHessian
 		state[8] = SCALE_A_INVERSE * state_scaled[8];
 		state[9] = SCALE_B_INVERSE * state_scaled[9];
 
-		PRE_worldToCam = SE3::exp(w2c_leftEps()) * get_worldToCam_evalPT();
+        PRE_worldToCam = SE3::exp(w2c_leftEps()) * get_worldToCam_evalPT();       ///< 预估计
 		PRE_camToWorld = PRE_worldToCam.inverse();
 		//setCurrentNullspace();
 	};
@@ -256,7 +258,7 @@ struct FrameHessian
 		statistics_pointsActivatedForThisFrame=0;
 		tracesCreatedForThisFrame=0;
 		debugImage=0;
-	};
+    }
 
 
 	void makeImages(float* color, bool* overexposedMap, CalibHessian* HCalib);
@@ -298,6 +300,11 @@ struct FrameHessian
 
 };
 
+
+
+/**
+ * @brief 相机内参,单例
+ */
 struct CalibHessian
 {
 	static int instanceCounter;
@@ -312,7 +319,7 @@ struct CalibHessian
 	VecC value_backup;
 	VecC value_minus_value_zero;
 
-	inline ~CalibHessian() {instanceCounter--;};
+    inline ~CalibHessian() {instanceCounter--;}
 	inline CalibHessian()
 	{
 
@@ -359,7 +366,7 @@ struct CalibHessian
 		this->value_scaledi[2] = - this->value_scaledf[2] / this->value_scaledf[0];
 		this->value_scaledi[3] = - this->value_scaledf[3] / this->value_scaledf[1];
 		this->value_minus_value_zero = this->value - this->value_zero;
-	};
+    }
 
 	inline void setValueScaled(VecC value_scaled)
 	{
@@ -375,7 +382,7 @@ struct CalibHessian
 		this->value_scaledi[1] = 1.0f / this->value_scaledf[1];
 		this->value_scaledi[2] = - this->value_scaledf[2] / this->value_scaledf[0];
 		this->value_scaledi[3] = - this->value_scaledf[3] / this->value_scaledf[1];
-	};
+    }
 
 
 	float Binv[256];
@@ -464,7 +471,7 @@ struct PointHessian
 
 	void release();
 	PointHessian(const ImmaturePoint* const rawPoint, CalibHessian* Hcalib);
-	inline ~PointHessian() {assert(efPoint==0); release(); instanceCounter--;};
+    inline ~PointHessian() {assert(efPoint==0); release(); instanceCounter--;}
 
 
 	inline bool isOOB(const std::vector<FrameHessian*>& toKeep, const std::vector<FrameHessian*>& toMarg) const
