@@ -101,6 +101,10 @@ struct FrameFramePrecalc
 
     inline ~FrameFramePrecalc() {}
     inline FrameFramePrecalc() {host=target=0;}
+
+    /**
+     * @brief set target to host的初始变换
+     */
 	void set(FrameHessian* host, FrameHessian* target, CalibHessian* HCalib);
 };
 
@@ -146,8 +150,12 @@ struct FrameHessian
 	Mat42 nullspaces_affine;
 	Vec6 nullspaces_scale;
 
-	// variable info.
-    SE3 worldToCam_evalPT;                        ///< 通过setEvalPT_scaled有做初始化
+
+    /**
+     * variable info.
+     * 通过setEvalPT_scaled有做初始化
+     */
+    SE3 worldToCam_evalPT;
 	Vec10 state_zero;
 	Vec10 state_scaled;
 	Vec10 state;	// [0-5: worldToCam-leftEps. 6-7: a,b]
@@ -170,7 +178,7 @@ struct FrameHessian
 	MinimalImageB3* debugImage;
 
 
-    inline Vec6 w2c_leftEps() const {return get_state_scaled().head<6>();}
+    inline Vec6 w2c_leftEps() const {return get_state_scaled().head<6>();}    ///< worldtoCam-left
     inline AffLight aff_g2l() const {return AffLight(get_state_scaled()[6], get_state_scaled()[7]);}
     inline AffLight aff_g2l_0() const {return AffLight(get_state_zero()[6]*SCALE_A, get_state_zero()[7]*SCALE_B);}
 
@@ -225,7 +233,7 @@ struct FrameHessian
 		this->worldToCam_evalPT = worldToCam_evalPT;
 		setStateScaled(initial_state);
 		setStateZero(this->get_state());
-	};
+    }
 
 	void release();
 
@@ -241,10 +249,9 @@ struct FrameHessian
 
 		}
 
-
-
 		if(debugImage != 0) delete debugImage;
-	};
+    }
+
 	inline FrameHessian()
 	{
 		instanceCounter++;
@@ -312,7 +319,7 @@ struct CalibHessian
 	VecC value_zero;
 	VecC value_scaled;
 	VecCf value_scaledf;
-	VecCf value_scaledi;
+    VecCf value_scaledi;    ///< 逆
 	VecC value;
 	VecC step;
 	VecC step_backup;
@@ -444,7 +451,7 @@ struct PointHessian
 	float maxRelBaseline;
 	int numGoodResiduals;
 
-    enum PtStatus {ACTIVE=0, INACTIVE, OUTLIER, OOB /* OOB是什么? 孤立点？  */, MARGINALIZED};
+    enum PtStatus {ACTIVE=0, INACTIVE, OUTLIER, OOB /* OOB孤立点,出了边界  */, MARGINALIZED};
 	PtStatus status;
 
     inline void setPointStatus(PtStatus s) {status=s;}

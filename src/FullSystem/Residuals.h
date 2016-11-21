@@ -95,7 +95,8 @@ public:
 		state_NewState = ResState::OUTLIER;
 
 		setState(ResState::IN);
-	};
+    }
+
 	void applyRes( bool copyJacobians);
 
 	void debugPlot();
