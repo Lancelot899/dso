@@ -625,7 +625,7 @@ void FullSystem::activatePointsMT()
 
 				float dist = coarseDistanceMap->fwdWarpedIDDistFinal[u+wG[1]*v] + (ptp[0]-floorf((float)(ptp[0])));
 
-                if(dist>=currentMinActDist* ph->my_type)    ///< PixelSelector::makeMaps中设置等于type=124
+                if(dist>=currentMinActDist* ph->my_type)    ///< PixelSelector::makeMaps中设置等于type=1 2 4
 				{
 					coarseDistanceMap->addIntoDistFinal(u,v);
 					toOptimize.push_back(ph);
@@ -772,8 +772,6 @@ void FullSystem::flagPointsForRemoval()
 						ph->efPoint->stateFlag = EFPointStatus::PS_DROP;
 						host->pointHessiansOut.push_back(ph);
 					}
-
-
 				}
 				else
 				{
@@ -1057,8 +1055,6 @@ void FullSystem::makeKeyFrame( FrameHessian* fh)
     ef->insertFrame(fh, &Hcalib);
 
 	setPrecalcValues();
-
-
 
 	// =========================== add new residuals for old points =========================
 	int numFwdResAdde=0;

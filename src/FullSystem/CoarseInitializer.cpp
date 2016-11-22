@@ -937,7 +937,7 @@ void CoarseInitializer::doStep(int lvl, float lambda, Vec8f inc)
 		float newIdepth = pts[i].idepth + step;
 		if(newIdepth < 1e-3 ) newIdepth = 1e-3;
 		if(newIdepth > 50) newIdepth = 50;
-		pts[i].idepth_new = newIdepth;
+        pts[i].idepth_new = newIdepth;                     ///< 这里在初始化更新深度，alpha Energy的Hl和bl解出来的inc的魔法效应
 	}
 
 }

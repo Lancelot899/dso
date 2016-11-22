@@ -179,9 +179,6 @@ Vec3 FullSystem::linearizeAll(bool fixLinearization)
 				ph->lastResiduals[0].second = r->state_state;
 			else if(ph->lastResiduals[1].first == r)
 				ph->lastResiduals[1].second = r->state_state;
-
-
-
 		}
 
 		int nResRemoved=0;
@@ -419,15 +416,10 @@ float FullSystem::optimize(int mnumOptIts)
 	if(frameHessians.size() < 3) mnumOptIts = 20;
 	if(frameHessians.size() < 4) mnumOptIts = 15;
 
-
-
-
-
 	std::ofstream logfile;
 
 
 	// get statistics and active residuals.
-
 	activeResiduals.clear();
 	int numPoints = 0;
 	int numLRes = 0;
@@ -454,9 +446,6 @@ float FullSystem::optimize(int mnumOptIts)
 	Vec3 lastEnergy = linearizeAll(false);
 	double lastEnergyL = calcLEnergy();
 	double lastEnergyM = calcMEnergy();
-
-
-
 
 
 	if(multiThreading)

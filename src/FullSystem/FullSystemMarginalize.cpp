@@ -57,15 +57,15 @@ namespace dso
 
 void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 {
-	if(setting_minFrameAge > setting_maxFrames)
-	{
-		for(int i=setting_maxFrames;i<(int)frameHessians.size();i++)
-		{
-			FrameHessian* fh = frameHessians[i-setting_maxFrames];
-			fh->flaggedForMarginalization = true;
-		}
-		return;
-	}
+//	if(setting_minFrameAge > setting_maxFrames)
+//	{
+//		for(int i=setting_maxFrames;i<(int)frameHessians.size();i++)
+//		{
+//			FrameHessian* fh = frameHessians[i-setting_maxFrames];
+//			fh->flaggedForMarginalization = true;
+//		}
+//		return;
+//	}
 
 
 	int flagged = 0;
@@ -73,8 +73,8 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 	for(int i=0;i<(int)frameHessians.size();i++)
 	{
 		FrameHessian* fh = frameHessians[i];
-		int in = fh->pointHessians.size() + fh->immaturePoints.size();
-		int out = fh->pointHessiansMarginalized.size() + fh->pointHessiansOut.size();
+        int in = fh->pointHessians.size() + fh->immaturePoints.size();
+        int out = fh->pointHessiansMarginalized.size() + fh->pointHessiansOut.size();
 
 
 		Vec2 refToFh=AffLight::fromToVecExposure(frameHessians.back()->ab_exposure, fh->ab_exposure,
@@ -84,23 +84,8 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 		if( (in < setting_minPointsRemaining *(in+out) || fabs(logf((float)refToFh[0])) > setting_maxLogAffFacInWindow)
 				&& ((int)frameHessians.size())-flagged > setting_minFrames)
 		{
-//			printf("MARGINALIZE frame %d, as only %'d/%'d points remaining (%'d %'d %'d %'d). VisInLast %'d / %'d. traces %d, activated %d!\n",
-//					fh->frameID, in, in+out,
-//					(int)fh->pointHessians.size(), (int)fh->immaturePoints.size(),
-//					(int)fh->pointHessiansMarginalized.size(), (int)fh->pointHessiansOut.size(),
-//					visInLast, outInLast,
-//					fh->statistics_tracesCreatedForThisFrame, fh->statistics_pointsActivatedForThisFrame);
-			fh->flaggedForMarginalization = true;
+            fh->flaggedForMarginalization = true;
 			flagged++;
-		}
-		else
-		{
-//			printf("May Keep frame %d, as %'d/%'d points remaining (%'d %'d %'d %'d). VisInLast %'d / %'d. traces %d, activated %d!\n",
-//					fh->frameID, in, in+out,
-//					(int)fh->pointHessians.size(), (int)fh->immaturePoints.size(),
-//					(int)fh->pointHessiansMarginalized.size(), (int)fh->pointHessiansOut.size(),
-//					visInLast, outInLast,
-//					fh->statistics_tracesCreatedForThisFrame, fh->statistics_pointsActivatedForThisFrame);
 		}
 	}
 
@@ -114,36 +99,29 @@ void FullSystem::flagFramesForMarginalization(FrameHessian* newFH)
 
 		for(FrameHessian* fh : frameHessians)
 		{
-			if(fh->frameID > latest->frameID-setting_minFrameAge || fh->frameID == 0) continue;
+            if(fh->frameID > latest->frameID-setting_minFrameAge || fh->frameID == 0) continue;     ///< 保持最近两帧
 			//if(fh==frameHessians.front() == 0) continue;
 
 			double distScore = 0;
-			for(FrameFramePrecalc &ffh : fh->targetPrecalc)
+            for(FrameFramePrecalc &ffh : fh->targetPrecalc)
 			{
 				if(ffh.target->frameID > latest->frameID-setting_minFrameAge+1 || ffh.target == ffh.host) continue;
-				distScore += 1/(1e-5+ffh.distanceLL);
+                distScore += 1/(1e-5+ffh.distanceLL);
 
 			}
-			distScore *= -sqrtf(fh->targetPrecalc.back().distanceLL);
+            distScore *= -sqrtf(fh->targetPrecalc.back().distanceLL);   ///< \sqrt(d(i, 0) \sum\limits_{j \in [3, n] \ {i}} (d(i,j) + \epsilon)^{-1}
 
 
 			if(distScore < smallestScore)
 			{
-				smallestScore = distScore;
+                smallestScore = distScore;         ///< 距离过近
 				toMarginalize = fh;
 			}
 		}
 
-//		printf("MARGINALIZE frame %d, as it is the closest (score %.2f)!\n",
-//				toMarginalize->frameID, smallestScore);
 		toMarginalize->flaggedForMarginalization = true;
 		flagged++;
 	}
-
-//	printf("FRAMES LEFT: ");
-//	for(FrameHessian* fh : frameHessians)
-//		printf("%d ", fh->frameID);
-//	printf("\n");
 }
 
 

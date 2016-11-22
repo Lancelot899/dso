@@ -103,9 +103,9 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 	Vec4f d_C_x, d_C_y;
 	float d_d_x, d_d_y;
 	{
-		float drescale, u, v, new_idepth;
-		float Ku, Kv;
-		Vec3f KliP;
+        float drescale, u, v, new_idepth;
+        float Ku, Kv;
+        Vec3f KliP;
 
 		if(!projectPoint(point->u, point->v, point->idepth_zero_scaled, 0, 0,HCalib,
 				PRE_RTll_0,PRE_tTll_0, drescale, u, v, Ku, Kv, KliP, new_idepth))
@@ -117,8 +117,6 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 		// diff d_idepth
 		d_d_x = drescale * (PRE_tTll_0[0]-PRE_tTll_0[2]*u)*SCALE_IDEPTH*HCalib->fxl();
 		d_d_y = drescale * (PRE_tTll_0[1]-PRE_tTll_0[2]*v)*SCALE_IDEPTH*HCalib->fyl();
-
-
 
 
 		// diff calib
