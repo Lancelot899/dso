@@ -942,7 +942,6 @@ void EnergyFunctional::makeIDX()
 			}
 		}
 
-
 	EFIndicesValid=true;
 }
 

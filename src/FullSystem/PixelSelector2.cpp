@@ -341,6 +341,7 @@ Eigen::Vector3i PixelSelector::select(const FrameHessian* const fh,
      * pixelTH1 = pixelTH0*dw1;pixelTH2 = pixelTH1*dw2;
      * 然后计算方向导数dirNorm = fabsf((float)(agxd.dot(dir2)));
      * 最后判断哪个好，哪个好就对n几进行自加，同时在该像素点处做好标记,最后返回
+     * 目标是想让点尽量均匀分布，而且选比较好的点，在这里面算了一个自适应的梯度阈值，通过这个阈值剔除点
      */
     int n3=0, n2=0, n4=0;
     for(int y4=0;y4<h;y4+=(4*pot)) for(int x4=0;x4<w;x4+=(4*pot))

@@ -520,7 +520,7 @@ void FullSystem::activatePointsMT_Reductor(
 
 void FullSystem::activatePointsMT()
 {
-
+    ///< 根据密度修正当前最小距离,这个距离初始化为2,值实验来的?
 	if(ef->nPoints < setting_desiredPointDensity*0.66)
 		currentMinActDist -= 0.8;
 	if(ef->nPoints < setting_desiredPointDensity*0.8)
@@ -564,7 +564,7 @@ void FullSystem::activatePointsMT()
 		if(host == newestHs) continue;
 
 		SE3 fhToNew = newestHs->PRE_worldToCam * host->PRE_camToWorld;
-		Mat33f KRKi = (coarseDistanceMap->K[1] * fhToNew.rotationMatrix().cast<float>() * coarseDistanceMap->Ki[0]);
+        Mat33f KRKi = (coarseDistanceMap->K[1] * fhToNew.rotationMatrix().cast<float>() * coarseDistanceMap->Ki[0]); ///< 投影到2层
 		Vec3f Kt = (coarseDistanceMap->K[1] * fhToNew.translation().cast<float>());
 
 
@@ -574,7 +574,7 @@ void FullSystem::activatePointsMT()
 			ph->idxInImmaturePoints = i;
 
 			// delete points that have never been traced successfully, or that are outlier on the last trace.
-			if(!std::isfinite(ph->idepth_max) || ph->lastTraceStatus == IPS_OUTLIER)
+            if(!std::isfinite(ph->idepth_max) || ph->lastTraceStatus == IPS_OUTLIER)          ///< 清除一些点
 			{
 //				immature_invalid_deleted++;
 				// remove point.
@@ -594,10 +594,10 @@ void FullSystem::activatePointsMT()
 
 
 			// if I cannot activate the point, skip it. Maybe also delete it.
-			if(!canActivate)
+            if(!canActivate)      ///< 不会被激活
 			{
 				// if point will be out afterwards, delete it instead.
-				if(ph->host->flaggedForMarginalization || ph->lastTraceStatus == IPS_OOB)
+                if(ph->host->flaggedForMarginalization || ph->lastTraceStatus == IPS_OOB)     ///< 如果point的host帧等着被marg或者点的状态已经oob了，也删除
 				{
 //					immature_notReady_deleted++;
 					delete ph;
@@ -608,7 +608,7 @@ void FullSystem::activatePointsMT()
 			}
 
 			// if need to marginalize: activate it!
-			if(setting_activateAllOnMarg && (ph->host->flaggedForMarginalization || ph->lastTraceStatus == IPS_OOB))
+            if(setting_activateAllOnMarg && (ph->host->flaggedForMarginalization || ph->lastTraceStatus == IPS_OOB))     ///< 如果能激活,但是需要被边缘化,直接加入优化队列,这些marg的点会在特别前面
 			{
 				toOptimize.push_back(ph);
 				continue;
@@ -625,7 +625,7 @@ void FullSystem::activatePointsMT()
 
 				float dist = coarseDistanceMap->fwdWarpedIDDistFinal[u+wG[1]*v] + (ptp[0]-floorf((float)(ptp[0])));
 
-				if(dist>=currentMinActDist* ph->my_type)
+                if(dist>=currentMinActDist* ph->my_type)    ///< PixelSelector::makeMaps中设置等于type=124
 				{
 					coarseDistanceMap->addIntoDistFinal(u,v);
 					toOptimize.push_back(ph);
@@ -1084,16 +1084,10 @@ void FullSystem::makeKeyFrame( FrameHessian* fh)
 	activatePointsMT();
 	ef->makeIDX();
 
-
-
-
 	// =========================== OPTIMIZE ALL =========================
 
 	fh->frameEnergyTH = frameHessians.back()->frameEnergyTH;
 	float rmse = optimize(setting_maxOptIterations);
-
-
-
 
 	// =========================== Figure Out if INITIALIZATION FAILED =========================
 	if(allKeyFramesHistory.size() <= 4)
@@ -1231,7 +1225,7 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
 		if(rand()/(float)RAND_MAX > keepPercentage) continue;
 
         Pnt* point = coarseInitializer->points[0]+i;
-        ImmaturePoint* pt = new ImmaturePoint(point->u+0.5f,point->v+0.5f,firstFrame,point->my_type, &Hcalib);   ///< +0.5,因为是整数，向上取
+        ImmaturePoint* pt = new ImmaturePoint(point->u+0.5f,point->v+0.5f,firstFrame,point->my_type, &Hcalib);   ///< +0.5,因为是整数，四舍五入
 
         if(!std::isfinite(pt->energyTH)) { delete pt; continue; }         ///< 成熟点的能量阈值必须有限，构造的时候会根据pattern计算
 
