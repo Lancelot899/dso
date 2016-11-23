@@ -1107,15 +1107,8 @@ void FullSystem::makeKeyFrame( FrameHessian* fh)
 
 
 
-
-
-
-
 	// =========================== REMOVE OUTLIER =========================
 	removeOutliers();
-
-
-
 
 	{
 		boost::unique_lock<boost::mutex> crlock(coarseTrackerSwapMutex);
