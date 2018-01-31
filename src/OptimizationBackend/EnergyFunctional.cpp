@@ -62,6 +62,18 @@ void EnergyFunctional::setAdjointsF(CalibHessian* Hcalib)
 			Mat88 AH = Mat88::Identity();
 			Mat88 AT = Mat88::Identity();
 
+            /**
+             * e = ln(T_tT_h^{-1}T_{th}^{-1})^{\vee}
+             * \tilde{e} = \ln(\exp(\delta_t^{\wedge})T_tT_h^{-1}\exp(-\delta_h^{\wedge})T_{th}^{-1})^{\vee}
+             *           = \ln(\exp(\delte_t^{\wedge})T_tT_h^{-1}T_{th}^{-1}T_{th}\exp(-\delta_h^{\wedge})T_{th}^{-1})^{\vee}
+             *           = \ln(\exp(\delte_t^{\wedge})T_tT_h^{-1}T_{th}^{-1}\exp(-(Ad(T_{th})\delta_h)^{\wedge})^{\vee}
+             *           = \ln(T_tT_h^{-1}T_{th}^{-1}(T_tT_h^{-1}T_{th}^{-1})^{-1}\exp(\delte_t^{\wedge})T_tT_h^{-1}T_{th}^{-1}\exp(-(Ad(T_{th})\delta_h)^{\wedge})^{\vee}
+             *           = \ln(T_tT_h^{-1}T_{th}^{-1}\exp(Ad(T_{th}T_hT_t^{-1})\delte_t^{\wedge})\exp(-(Ad(T_{th})\delta_h)^{\wedge})^{\vee}
+             *     \approx \ln(T_tT_h^{-1}T_{th}^{-1}\exp(\delte_t^{\wedge})\exp(-(Ad(T_{th})\delta_h)^{\wedge})^{\vee}
+             *     \approx \ln(T_tT_h^{-1}T_{th}^{-1}(I + \delte_t^{\wedge} - (Ad(T_{th})\delta_h)^{\wedge})^{vee}
+             *     \approx \ln(T_tT_h^{-1}T_{th}^{-1})^{\vee} + J^{-1}(e)\delte_t - J^{-1}(e)Ad(T_{th})\delta_h
+             * \frac{\partial e}{\partial \xi_t} = J^{-1}(e), \frac{\partial e}{\partial \xi_h} = -J^{-1}(e)Ad(T_{th})
+             */
 			AH.topLeftCorner<6,6>() = -hostToTarget.Adj().transpose();
 			AT.topLeftCorner<6,6>() = Mat66::Identity();
 
@@ -426,6 +438,7 @@ EFResidual* EnergyFunctional::insertResidual(PointFrameResidual* r)
 	r->efResidual = efr;
 	return efr;
 }
+
 EFFrame* EnergyFunctional::insertFrame(FrameHessian* fh, CalibHessian* Hcalib)
 {
 	EFFrame* eff = new EFFrame(fh);
@@ -452,8 +465,8 @@ EFFrame* EnergyFunctional::insertFrame(FrameHessian* fh, CalibHessian* Hcalib)
 
 	for(EFFrame* fh2 : frames)
 	{
-        connectivityMap[(((uint64_t)eff->frameID) << 32) + ((uint64_t)fh2->frameID)] = Eigen::Vector2i(0,0);
-		if(fh2 != eff)
+		connectivityMap[(((uint64_t)eff->frameID) << 32) + ((uint64_t)fh2->frameID)] = Eigen::Vector2i(0,0);
+		if(fh2 != eff) ///< 对称结构
             connectivityMap[(((uint64_t)fh2->frameID) << 32) + ((uint64_t)eff->frameID)] = Eigen::Vector2i(0,0);
 	}
 
@@ -928,7 +941,6 @@ void EnergyFunctional::makeIDX()
 				r->targetIDX = r->target->idx;
 			}
 		}
-
 
 	EFIndicesValid=true;
 }

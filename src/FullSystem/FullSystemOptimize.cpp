@@ -69,7 +69,6 @@ void FullSystem::linearizeAll_Reductor(bool fixLinearization, std::vector<PointF
 					Vec3f ptp = ptp_inf + r->host->targetPrecalc[r->target->idx].PRE_KtTll*p->idepth_scaled;	// projected point with real depth.
 					float relBS = 0.01*((ptp_inf.head<2>() / ptp_inf[2])-(ptp.head<2>() / ptp[2])).norm();	// 0.01 = one pixel.
 
-
 					if(relBS > p->maxRelBaseline)
 						p->maxRelBaseline = relBS;
 
@@ -175,9 +174,6 @@ Vec3 FullSystem::linearizeAll(bool fixLinearization)
 				ph->lastResiduals[0].second = r->state_state;
 			else if(ph->lastResiduals[1].first == r)
 				ph->lastResiduals[1].second = r->state_state;
-
-
-
 		}
 
 		int nResRemoved=0;
@@ -412,13 +408,7 @@ float FullSystem::optimize(int mnumOptIts)
 	if(frameHessians.size() < 3) mnumOptIts = 20;
 	if(frameHessians.size() < 4) mnumOptIts = 15;
 
-
-
-
-
-
 	// get statistics and active residuals.
-
 	activeResiduals.clear();
 	int numPoints = 0;
 	int numLRes = 0;
@@ -445,9 +435,6 @@ float FullSystem::optimize(int mnumOptIts)
 	Vec3 lastEnergy = linearizeAll(false);
 	double lastEnergyL = calcLEnergy();
 	double lastEnergyM = calcMEnergy();
-
-
-
 
 
 	if(multiThreading)

@@ -34,15 +34,29 @@ namespace dso
 
 
 template<int i, int j>
+/**
+ * @brief block构建器
+ */
 class AccumulatorXX
 {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
+  /**
+   * 一级缓存(小于1000)
+   */
   Eigen::Matrix<float,i,j> A;
+
+  /**
+   * @brief 二级缓存(1000-10000)
+   */
   Eigen::Matrix<float,i,j> A1k;
+
+  /**
+   * @brief 三级缓存(10000-inf)
+   */
   Eigen::Matrix<float,i,j> A1m;
-  size_t num;
+  size_t num;     ///< 约束个数
 
   inline void initialize()
   {
@@ -69,6 +83,10 @@ public:
 private:
   float numIn1, numIn1k, numIn1m;
 
+  /**
+   * @brief 像上级存储器转换
+   * @param force
+   */
   void shiftUp(bool force)
   {
 	  if(numIn1 > 1000 || force)
@@ -110,7 +128,6 @@ public:
 	shiftUp(true);
 	A=SSEData1m[0+0] + SSEData1m[0+1] + SSEData1m[0+2] + SSEData1m[0+3];
   }
-
 
   inline void updateSingle(
 		  const float val)
@@ -1025,6 +1042,10 @@ public:
 		  const __m128 J8)
   {
 	  float* pt=SSEData;
+      /**
+       * _mm_add_ps表示packed执行模式的加法
+       * _mm_mul_ps表示packed执行模式的乘法
+       */
 	  _mm_store_ps(pt, _mm_add_ps(_mm_load_ps(pt),_mm_mul_ps(J0,J0))); pt+=4;
 	  _mm_store_ps(pt, _mm_add_ps(_mm_load_ps(pt),_mm_mul_ps(J0,J1))); pt+=4;
 	  _mm_store_ps(pt, _mm_add_ps(_mm_load_ps(pt),_mm_mul_ps(J0,J2))); pt+=4;
@@ -1326,8 +1347,15 @@ private:
   {
 	  if(numIn1 > 1000 || force)
 	  {
-		  for(int i=0;i<45;i++)
+          for(int i=0;i<45;i++) {
+              /**
+               * void _mm_store_ps (float *p, __m128 a): 一条指令，p[i] = a[i]
+               * __m128 _mm_load_ps (float *p):用于packed的加载（下面的都是用于packed的），要求p的地址是16字节对齐，
+               *                               否则读取的结果会出错，（r0 := p[0], r1 := p[1], r2 := p[2], r3 := p[3]）。
+               */
 			  _mm_store_ps(SSEData1k+4*i, _mm_add_ps(_mm_load_ps(SSEData+4*i),_mm_load_ps(SSEData1k+4*i)));
+          }
+
 		  numIn1k+=numIn1;
 		  numIn1=0;
 		  memset(SSEData,0, sizeof(float)*4*45);
@@ -1335,7 +1363,7 @@ private:
 
 	  if(numIn1k > 1000 || force)
 	  {
-		  for(int i=0;i<45;i++)
+          for(int i=0;i<45;i++)
 			  _mm_store_ps(SSEData1m+4*i, _mm_add_ps(_mm_load_ps(SSEData1k+4*i),_mm_load_ps(SSEData1m+4*i)));
 		  numIn1m+=numIn1k;
 		  numIn1k=0;

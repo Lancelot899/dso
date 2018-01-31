@@ -494,18 +494,7 @@ void FullSystem::traceNewCoarse(FrameHessian* fh)
 			trace_total++;
 		}
 	}
-//	printf("ADD: TRACE: %'d points. %'d (%.0f%%) good. %'d (%.0f%%) skip. %'d (%.0f%%) badcond. %'d (%.0f%%) oob. %'d (%.0f%%) out. %'d (%.0f%%) uninit.\n",
-//			trace_total,
-//			trace_good, 100*trace_good/(float)trace_total,
-//			trace_skip, 100*trace_skip/(float)trace_total,
-//			trace_badcondition, 100*trace_badcondition/(float)trace_total,
-//			trace_oob, 100*trace_oob/(float)trace_total,
-//			trace_out, 100*trace_out/(float)trace_total,
-//			trace_uninitialized, 100*trace_uninitialized/(float)trace_total);
 }
-
-
-
 
 void FullSystem::activatePointsMT_Reductor(
 		std::vector<PointHessian*>* optimized,
@@ -524,7 +513,7 @@ void FullSystem::activatePointsMT_Reductor(
 
 void FullSystem::activatePointsMT()
 {
-
+    ///< 根据密度修正当前最小距离,这个距离初始化为2,值实验来的?
 	if(ef->nPoints < setting_desiredPointDensity*0.66)
 		currentMinActDist -= 0.8;
 	if(ef->nPoints < setting_desiredPointDensity*0.8)
@@ -568,7 +557,7 @@ void FullSystem::activatePointsMT()
 		if(host == newestHs) continue;
 
 		SE3 fhToNew = newestHs->PRE_worldToCam * host->PRE_camToWorld;
-		Mat33f KRKi = (coarseDistanceMap->K[1] * fhToNew.rotationMatrix().cast<float>() * coarseDistanceMap->Ki[0]);
+        Mat33f KRKi = (coarseDistanceMap->K[1] * fhToNew.rotationMatrix().cast<float>() * coarseDistanceMap->Ki[0]); ///< 投影到2层
 		Vec3f Kt = (coarseDistanceMap->K[1] * fhToNew.translation().cast<float>());
 
 
@@ -578,7 +567,7 @@ void FullSystem::activatePointsMT()
 			ph->idxInImmaturePoints = i;
 
 			// delete points that have never been traced successfully, or that are outlier on the last trace.
-			if(!std::isfinite(ph->idepth_max) || ph->lastTraceStatus == IPS_OUTLIER)
+            if(!std::isfinite(ph->idepth_max) || ph->lastTraceStatus == IPS_OUTLIER)          ///< 清除一些点
 			{
 //				immature_invalid_deleted++;
 				// remove point.
@@ -598,10 +587,10 @@ void FullSystem::activatePointsMT()
 
 
 			// if I cannot activate the point, skip it. Maybe also delete it.
-			if(!canActivate)
+            if(!canActivate)      ///< 不会被激活
 			{
 				// if point will be out afterwards, delete it instead.
-				if(ph->host->flaggedForMarginalization || ph->lastTraceStatus == IPS_OOB)
+                if(ph->host->flaggedForMarginalization || ph->lastTraceStatus == IPS_OOB)     ///< 如果point的host帧等着被marg或者点的状态已经oob了，也删除
 				{
 //					immature_notReady_deleted++;
 					delete ph;
@@ -622,7 +611,7 @@ void FullSystem::activatePointsMT()
 
 				float dist = coarseDistanceMap->fwdWarpedIDDistFinal[u+wG[1]*v] + (ptp[0]-floorf((float)(ptp[0])));
 
-				if(dist>=currentMinActDist* ph->my_type)
+                if(dist>=currentMinActDist* ph->my_type)    ///< PixelSelector::makeMaps中设置等于type=1 2 4
 				{
 					coarseDistanceMap->addIntoDistFinal(u,v);
 					toOptimize.push_back(ph);
@@ -768,8 +757,6 @@ void FullSystem::flagPointsForRemoval()
 						ph->efPoint->stateFlag = EFPointStatus::PS_DROP;
 						host->pointHessiansOut.push_back(ph);
 					}
-
-
 				}
 				else
 				{
@@ -820,8 +807,7 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 
 	// =========================== make Images / derivatives etc. =========================
 	fh->ab_exposure = image->exposure_time;
-    fh->makeImages(image->image, &Hcalib);
-
+    fh->makeImages(image->image, &Hcalib); ///< 准备好这一帧中维护的图像
 
 
 
@@ -830,13 +816,12 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 		// use initializer!
 		if(coarseInitializer->frameID<0)	// first frame set. fh is kept by coarseInitializer.
 		{
-
 			coarseInitializer->setFirst(&Hcalib, fh);
 		}
-		else if(coarseInitializer->trackFrame(fh, outputWrapper))	// if SNAPPED
+        else if(coarseInitializer->trackFrame(fh, outputWrapper))	// if SNAPPED   第一帧已经有了，track
 		{
 
-			initializeFromInitializer(fh);
+            initializeFromInitializer(fh);                         ///< 初始化
 			lock.unlock();
 			deliverTrackedFrame(fh, true);
 		}
@@ -920,8 +905,6 @@ void FullSystem::deliverTrackedFrame(FrameHessian* fh, bool needKF)
 			lastRefStopID = coarseTracker->refFrameID;
 		}
 		else handleKey( IOWrap::waitKey(1) );
-
-
 
 		if(needKF) makeKeyFrame(fh);
 		else makeNonKeyFrame(fh);
@@ -1048,7 +1031,7 @@ void FullSystem::makeKeyFrame( FrameHessian* fh)
 		fh->setEvalPT_scaled(fh->shell->camToWorld.inverse(),fh->shell->aff_g2l);
 	}
 
-	traceNewCoarse(fh);
+    traceNewCoarse(fh);         ///< 内部调用ImmaturePoint::traceOn,并做了个记录
 
 	boost::unique_lock<boost::mutex> lock(mapMutex);
 
@@ -1061,11 +1044,9 @@ void FullSystem::makeKeyFrame( FrameHessian* fh)
 	frameHessians.push_back(fh);
 	fh->frameID = allKeyFramesHistory.size();
 	allKeyFramesHistory.push_back(fh->shell);
-	ef->insertFrame(fh, &Hcalib);
+    ef->insertFrame(fh, &Hcalib);
 
 	setPrecalcValues();
-
-
 
 	// =========================== add new residuals for old points =========================
 	int numFwdResAdde=0;
@@ -1091,16 +1072,10 @@ void FullSystem::makeKeyFrame( FrameHessian* fh)
 	activatePointsMT();
 	ef->makeIDX();
 
-
-
-
 	// =========================== OPTIMIZE ALL =========================
 
 	fh->frameEnergyTH = frameHessians.back()->frameEnergyTH;
 	float rmse = optimize(setting_maxOptIterations);
-
-
-
 
 
 	// =========================== Figure Out if INITIALIZATION FAILED =========================
@@ -1124,17 +1099,11 @@ void FullSystem::makeKeyFrame( FrameHessian* fh)
 	}
 
 
-
     if(isLost) return;
-
-
 
 
 	// =========================== REMOVE OUTLIER =========================
 	removeOutliers();
-
-
-
 
 	{
 		boost::unique_lock<boost::mutex> crlock(coarseTrackerSwapMutex);
@@ -1201,18 +1170,18 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
 	boost::unique_lock<boost::mutex> lock(mapMutex);
 
 	// add firstframe.
-	FrameHessian* firstFrame = coarseInitializer->firstFrame;
+    FrameHessian* firstFrame = coarseInitializer->firstFrame;
 	firstFrame->idx = frameHessians.size();
 	frameHessians.push_back(firstFrame);
 	firstFrame->frameID = allKeyFramesHistory.size();
 	allKeyFramesHistory.push_back(firstFrame->shell);
-	ef->insertFrame(firstFrame, &Hcalib);
-	setPrecalcValues();
+    ef->insertFrame(firstFrame, &Hcalib);     ///< 将第一帧的hession加入energy function
+    setPrecalcValues();                       ///< 设置优化初始值
 
 	//int numPointsTotal = makePixelStatus(firstFrame->dI, selectionMap, wG[0], hG[0], setting_desiredDensity);
 	//int numPointsTotal = pixelSelector->makeMaps(firstFrame->dIp, selectionMap,setting_desiredDensity);
 
-	firstFrame->pointHessians.reserve(wG[0]*hG[0]*0.2f);
+    firstFrame->pointHessians.reserve(wG[0]*hG[0]*0.2f);              ///< 开辟预备空间
 	firstFrame->pointHessiansMarginalized.reserve(wG[0]*hG[0]*0.2f);
 	firstFrame->pointHessiansOut.reserve(wG[0]*hG[0]*0.2f);
 
@@ -1220,46 +1189,49 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
 	float sumID=1e-5, numID=1e-5;
 	for(int i=0;i<coarseInitializer->numPoints[0];i++)
 	{
-		sumID += coarseInitializer->points[0][i].iR;
+        sumID += coarseInitializer->points[0][i].iR;           ///< iR初始化是逆深度
 		numID++;
 	}
 	float rescaleFactor = 1 / (sumID / numID);
 
 	// randomly sub-select the points I need.
-	float keepPercentage = setting_desiredPointDensity / coarseInitializer->numPoints[0];
+    float keepPercentage = setting_desiredPointDensity / coarseInitializer->numPoints[0];
 
     if(!setting_debugout_runquiet)
         printf("Initialization: keep %.1f%% (need %d, have %d)!\n", 100*keepPercentage,
                 (int)(setting_desiredPointDensity), coarseInitializer->numPoints[0] );
 
+    /**
+     *  在选好的点中，随机选择一部分
+     */
 	for(int i=0;i<coarseInitializer->numPoints[0];i++)
 	{
 		if(rand()/(float)RAND_MAX > keepPercentage) continue;
 
-		Pnt* point = coarseInitializer->points[0]+i;
-		ImmaturePoint* pt = new ImmaturePoint(point->u+0.5f,point->v+0.5f,firstFrame,point->my_type, &Hcalib);
+        Pnt* point = coarseInitializer->points[0]+i;
+        ImmaturePoint* pt = new ImmaturePoint(point->u+0.5f,point->v+0.5f,firstFrame,point->my_type, &Hcalib);   ///< +0.5,因为是整数，四舍五入
 
-		if(!std::isfinite(pt->energyTH)) { delete pt; continue; }
+        if(!std::isfinite(pt->energyTH)) { delete pt; continue; }         ///< 成熟点的能量阈值必须有限，构造的时候会根据pattern计算
 
 
-		pt->idepth_max=pt->idepth_min=1;
-		PointHessian* ph = new PointHessian(pt, &Hcalib);
+        pt->idepth_max=pt->idepth_min=1;                                ///< 初始化深度为1
+        PointHessian* ph = new PointHessian(pt, &Hcalib);               ///< 初始化点的hession块
 		delete pt;
 		if(!std::isfinite(ph->energyTH)) {delete ph; continue;}
 
-		ph->setIdepthScaled(point->iR*rescaleFactor);
-		ph->setIdepthZero(ph->idepth);
+        ph->setIdepthScaled(point->iR*rescaleFactor);                  ///< 设置带尺度的深度?
+        ph->setIdepthZero(ph->idepth);                                 ///< 设置0的深度?(不明iR意义)
 		ph->hasDepthPrior=true;
 		ph->setPointStatus(PointHessian::ACTIVE);
 
 		firstFrame->pointHessians.push_back(ph);
-		ef->insertPoint(ph);
+        ef->insertPoint(ph);                                          ///< 插入点的hession块
 	}
 
 
 
 	SE3 firstToNew = coarseInitializer->thisToNext;
-	firstToNew.translation() /= rescaleFactor;
+    firstToNew.translation() /= rescaleFactor;              ///< 初始化的平移
 
 
 	// really no lock required, as we are initializing.
@@ -1318,7 +1290,7 @@ void FullSystem::setPrecalcValues()
 	{
 		fh->targetPrecalc.resize(frameHessians.size());
 		for(unsigned int i=0;i<frameHessians.size();i++)
-			fh->targetPrecalc[i].set(fh, frameHessians[i], &Hcalib);
+            fh->targetPrecalc[i].set(fh, frameHessians[i], &Hcalib);    ///< 将addFrame或marg后的FrameHession填入targetPrecalc队列，并给出优化初始值
 	}
 
 	ef->setDeltaF(&Hcalib);

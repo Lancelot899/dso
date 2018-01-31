@@ -101,9 +101,9 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 	Vec4f d_C_x, d_C_y;
 	float d_d_x, d_d_y;
 	{
-		float drescale, u, v, new_idepth;
-		float Ku, Kv;
-		Vec3f KliP;
+        float drescale, u, v, new_idepth;
+        float Ku, Kv;
+        Vec3f KliP;
 
 		if(!projectPoint(point->u, point->v, point->idepth_zero_scaled, 0, 0,HCalib,
 				PRE_RTll_0,PRE_tTll_0, drescale, u, v, Ku, Kv, KliP, new_idepth))
@@ -112,11 +112,12 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 		centerProjectedTo = Vec3f(Ku, Kv, new_idepth);
 
 
-		// diff d_idepth
+        // diff d_idepth
+        /**
+         *  \frac{du}{did} = fx\frac{d(x'/z')}{did} = fx\frac{dx'/did * d - dd/did * x'}{d^2} = fx/d * (t[0] - t[2] * u)
+         */
 		d_d_x = drescale * (PRE_tTll_0[0]-PRE_tTll_0[2]*u)*SCALE_IDEPTH*HCalib->fxl();
 		d_d_y = drescale * (PRE_tTll_0[1]-PRE_tTll_0[2]*v)*SCALE_IDEPTH*HCalib->fyl();
-
-
 
 
 		// diff calib
@@ -141,6 +142,10 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 		d_C_y[3] = (d_C_y[3]+1)*SCALE_C;
 
 
+        /**
+         * d[u, v] /dxi = \left [ \begin{array} fx / d & 0 & -x fx / d^2 & -fx * x * y / d^2 & fx + (fx * x^2) / d^2 & -(fx * y) / d \\
+         *                         0 & fy / d & -y * fy / d^2 & -fy - y^2 * fy / d^2 & fy * x * y / d^2 & x * fy / d \end{array} \right]
+         */
 		d_xi_x[0] = new_idepth*HCalib->fxl();
 		d_xi_x[1] = 0;
 		d_xi_x[2] = -new_idepth*u*HCalib->fxl();
@@ -168,11 +173,6 @@ double PointFrameResidual::linearize(CalibHessian* HCalib)
 		J->Jpdd[1] = d_d_y;
 
 	}
-
-
-
-
-
 
 	float JIdxJIdx_00=0, JIdxJIdx_11=0, JIdxJIdx_10=0;
 	float JabJIdx_00=0, JabJIdx_01=0, JabJIdx_10=0, JabJIdx_11=0;

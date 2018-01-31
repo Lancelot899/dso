@@ -83,23 +83,29 @@ struct FrameFramePrecalc
 	FrameHessian* target;	// defines column
 
 	// precalc values
-	Mat33f PRE_RTll;
-	Mat33f PRE_KRKiTll;
-	Mat33f PRE_RKiTll;
-	Mat33f PRE_RTll_0;
+    ///< rotation
+    Mat33f PRE_RTll;    ///< leftToLeft = target->PRE_worldToCam * host->PRE_camToWorld
+    Mat33f PRE_KRKiTll; ///< K * PRE_RTll * K.inverse();
+    Mat33f PRE_RKiTll;  ///< PRE_RTll * K.inverse();
+    Mat33f PRE_RTll_0;  ///< target->get_worldToCam_evalPT() * host->get_worldToCam_evalPT().inverse()
 
 	Vec2f PRE_aff_mode;
 	float PRE_b0_mode;
 
-	Vec3f PRE_tTll;
-	Vec3f PRE_KtTll;
-	Vec3f PRE_tTll_0;
+    ///< translation
+    Vec3f PRE_tTll;   ///< leftToLeft = target->PRE_worldToCam * host->PRE_camToWorld
+    Vec3f PRE_KtTll;  ///< K * PRE_tTll
+    Vec3f PRE_tTll_0; ///< target->get_worldToCam_evalPT() * host->get_worldToCam_evalPT().inverse()
 
-	float distanceLL;
+    float distanceLL; ///< PRE_tTll.norm();
 
 
     inline ~FrameFramePrecalc() {}
     inline FrameFramePrecalc() {host=target=0;}
+
+    /**
+     * @brief set target to host的初始变换
+     */
 	void set(FrameHessian* host, FrameHessian* target, CalibHessian* HCalib);
 };
 
@@ -119,8 +125,8 @@ struct FrameHessian
 	Eigen::Vector3f* dI;				 // trace, fine tracking. Used for direction select (not for gradient histograms etc.)
 	Eigen::Vector3f* dIp[PYR_LEVELS];	 // coarse tracking / coarse initializer. NAN in [0] only.
 	float* absSquaredGrad[PYR_LEVELS];  // only used for pixel select (histograms etc.). no NAN.
-
-
+	bool* overexposedMap;
+	bool* overexposedMapp[PYR_LEVELS];  ///< 过曝光图，dso对每个像素点有一个过曝光的判别
 
 
 
@@ -145,8 +151,12 @@ struct FrameHessian
 	Mat42 nullspaces_affine;
 	Vec6 nullspaces_scale;
 
-	// variable info.
-	SE3 worldToCam_evalPT;
+
+    /**
+     * variable info.
+     * 通过setEvalPT_scaled有做初始化
+     */
+    SE3 worldToCam_evalPT;
 	Vec10 state_zero;
 	Vec10 state_scaled;
 	Vec10 state;	// [0-5: worldToCam-leftEps. 6-7: a,b]
@@ -169,7 +179,11 @@ struct FrameHessian
 	MinimalImageB3* debugImage;
 
 
+<<<<<<< HEAD
     inline Vec6 w2c_leftEps() const {return get_state_scaled().head<6>();}
+=======
+    inline Vec6 w2c_leftEps() const {return get_state_scaled().head<6>();}    ///< worldtoCam-left
+>>>>>>> 20fd4dc8b199db98a51847ae398f8eea7d0b2a71
     inline AffLight aff_g2l() const {return AffLight(get_state_scaled()[6], get_state_scaled()[7]);}
     inline AffLight aff_g2l_0() const {return AffLight(get_state_zero()[6]*SCALE_A, get_state_zero()[7]*SCALE_B);}
 
@@ -202,7 +216,7 @@ struct FrameHessian
 		state[8] = SCALE_A_INVERSE * state_scaled[8];
 		state[9] = SCALE_B_INVERSE * state_scaled[9];
 
-		PRE_worldToCam = SE3::exp(w2c_leftEps()) * get_worldToCam_evalPT();
+        PRE_worldToCam = SE3::exp(w2c_leftEps()) * get_worldToCam_evalPT();       ///< 预估计
 		PRE_camToWorld = PRE_worldToCam.inverse();
 		//setCurrentNullspace();
 	};
@@ -224,7 +238,7 @@ struct FrameHessian
 		this->worldToCam_evalPT = worldToCam_evalPT;
 		setStateScaled(initial_state);
 		setStateZero(this->get_state());
-	};
+    }
 
 	void release();
 
@@ -239,10 +253,9 @@ struct FrameHessian
 
 		}
 
-
-
 		if(debugImage != 0) delete debugImage;
-	};
+    }
+
 	inline FrameHessian()
 	{
 		instanceCounter++;
@@ -254,7 +267,7 @@ struct FrameHessian
 
 
 		debugImage=0;
-	};
+    }
 
 
     void makeImages(float* color, CalibHessian* HCalib);
@@ -296,6 +309,11 @@ struct FrameHessian
 
 };
 
+
+
+/**
+ * @brief 相机内参,单例
+ */
 struct CalibHessian
 {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -304,7 +322,7 @@ struct CalibHessian
 	VecC value_zero;
 	VecC value_scaled;
 	VecCf value_scaledf;
-	VecCf value_scaledi;
+    VecCf value_scaledi;    ///< 逆
 	VecC value;
 	VecC step;
 	VecC step_backup;
@@ -358,7 +376,7 @@ struct CalibHessian
 		this->value_scaledi[2] = - this->value_scaledf[2] / this->value_scaledf[0];
 		this->value_scaledi[3] = - this->value_scaledf[3] / this->value_scaledf[1];
 		this->value_minus_value_zero = this->value - this->value_zero;
-	};
+    }
 
 	inline void setValueScaled(const VecC &value_scaled)
 	{
@@ -374,7 +392,7 @@ struct CalibHessian
 		this->value_scaledi[1] = 1.0f / this->value_scaledf[1];
 		this->value_scaledi[2] = - this->value_scaledf[2] / this->value_scaledf[0];
 		this->value_scaledi[3] = - this->value_scaledf[3] / this->value_scaledf[1];
-	};
+    }
 
 
 	float Binv[256];
@@ -433,7 +451,7 @@ struct PointHessian
 	float maxRelBaseline;
 	int numGoodResiduals;
 
-	enum PtStatus {ACTIVE=0, INACTIVE, OUTLIER, OOB, MARGINALIZED};
+    enum PtStatus {ACTIVE=0, INACTIVE, OUTLIER, OOB /* OOB孤立点,出了边界  */, MARGINALIZED};
 	PtStatus status;
 
     inline void setPointStatus(PtStatus s) {status=s;}
@@ -450,7 +468,11 @@ struct PointHessian
 	inline void setIdepthZero(float idepth) {
 		idepth_zero = idepth;
 		idepth_zero_scaled = SCALE_IDEPTH * idepth;
+<<<<<<< HEAD
 		nullspaces_scale = -(idepth*1.001 - idepth/1.001)*500;
+=======
+        nullspaces_scale = -(idepth*1.001 - idepth/1.001)*500;            ///<  这是啥？
+>>>>>>> 20fd4dc8b199db98a51847ae398f8eea7d0b2a71
     }
 
 

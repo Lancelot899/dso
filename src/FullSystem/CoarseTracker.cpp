@@ -885,17 +885,17 @@ void CoarseDistanceMap::makeDistanceMap(
 		if(frame == fh) continue;
 
 		SE3 fhToNew = frame->PRE_worldToCam * fh->PRE_camToWorld;
-		Mat33f KRKi = (K[1] * fhToNew.rotationMatrix().cast<float>() * Ki[0]);
+        Mat33f KRKi = (K[1] * fhToNew.rotationMatrix().cast<float>() * Ki[0]);   ///< 为啥是第一层乘以第0层？
 		Vec3f Kt = (K[1] * fhToNew.translation().cast<float>());
 
 		for(PointHessian* ph : fh->pointHessians)
 		{
 			assert(ph->status == PointHessian::ACTIVE);
-			Vec3f ptp = KRKi * Vec3f(ph->u, ph->v, 1) + Kt*ph->idepth_scaled;
+            Vec3f ptp = KRKi * Vec3f(ph->u, ph->v, 1) + Kt*ph->idepth_scaled;
 			int u = ptp[0] / ptp[2] + 0.5f;
 			int v = ptp[1] / ptp[2] + 0.5f;
-			if(!(u > 0 && v > 0 && u < w[1] && v < h[1])) continue;
-			fwdWarpedIDDistFinal[u+w1*v]=0;
+            if(!(u > 0 && v > 0 && u < w[1] && v < h[1])) continue;    ///< 选了投影之后没跑出去那些
+            fwdWarpedIDDistFinal[u+w1*v]=0;                            ///< 满足条件的点fwdWarpedIDDistFinal设为0
 			bfsList1[numItems] = Eigen::Vector2i(u,v);
 			numItems++;
 		}
@@ -924,7 +924,7 @@ void CoarseDistanceMap::growDistBFS(int bfsNum)
 		std::swap<Eigen::Vector2i*>(bfsList1,bfsList2);
 		bfsNum=0;
 
-		if(k%2==0)
+        if(k%2==0) ///< 偶数取上下左右
 		{
 			for(int i=0;i<bfsNum2;i++)
 			{
@@ -933,9 +933,9 @@ void CoarseDistanceMap::growDistBFS(int bfsNum)
 				if(x==0 || y== 0 || x==w1-1 || y==h1-1) continue;
 				int idx = x + y * w1;
 
-				if(fwdWarpedIDDistFinal[idx+1] > k)
+                if(fwdWarpedIDDistFinal[idx+1] > k)
 				{
-					fwdWarpedIDDistFinal[idx+1] = k;
+                    fwdWarpedIDDistFinal[idx+1] = k;   ///< 下次循环过来被赋过值,过不了判断
 					bfsList1[bfsNum] = Eigen::Vector2i(x+1,y); bfsNum++;
 				}
 				if(fwdWarpedIDDistFinal[idx-1] > k)
@@ -955,7 +955,7 @@ void CoarseDistanceMap::growDistBFS(int bfsNum)
 				}
 			}
 		}
-		else
+        else    ///< 奇数取围着8个,原因？
 		{
 			for(int i=0;i<bfsNum2;i++)
 			{

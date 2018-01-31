@@ -80,12 +80,12 @@ void FrameHessian::setStateZero(const Vec10 &state_zero)
 
 	for(int i=0;i<6;i++)
 	{
-		Vec6 eps; eps.setZero(); eps[i] = 1e-3;
+        Vec6 eps; eps.setZero(); eps[i] = 1e-3;                     ///< 扰动值
 		SE3 EepsP = Sophus::SE3::exp(eps);
 		SE3 EepsM = Sophus::SE3::exp(-eps);
 		SE3 w2c_leftEps_P_x0 = (get_worldToCam_evalPT() * EepsP) * get_worldToCam_evalPT().inverse();
 		SE3 w2c_leftEps_M_x0 = (get_worldToCam_evalPT() * EepsM) * get_worldToCam_evalPT().inverse();
-		nullspaces_pose.col(i) = (w2c_leftEps_P_x0.log() - w2c_leftEps_M_x0.log())/(2e-3);
+        nullspaces_pose.col(i) = (w2c_leftEps_P_x0.log() - w2c_leftEps_M_x0.log())/(2e-3);    ///< 初始化0空间，原理？
 	}
 	//nullspaces_pose.topRows<3>() *= SCALE_XI_TRANS_INVERSE;
 	//nullspaces_pose.bottomRows<3>() *= SCALE_XI_ROT_INVERSE;
@@ -159,6 +159,9 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 			for(int y=0;y<hl;y++)
 				for(int x=0;x<wl;x++)
 				{
+                    /**
+                     * 上层灰度等于４个下层灰度的平均值
+                     */
 					dI_l[x + y*wl][0] = 0.25f * (dI_lm[2*x   + 2*y*wlm1][0] +
 												dI_lm[2*x+1 + 2*y*wlm1][0] +
 												dI_lm[2*x   + 2*y*wlm1+wlm1][0] +
@@ -168,7 +171,14 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 
 		for(int idx=wl;idx < wl*(hl-1);idx++)
 		{
+            /**
+             * @brief u方向的中心差分
+             */
 			float dx = 0.5f*(dI_l[idx+1][0] - dI_l[idx-1][0]);
+
+            /**
+             * @brief v方向的中心差分
+             */
 			float dy = 0.5f*(dI_l[idx+wl][0] - dI_l[idx-wl][0]);
 
 
@@ -183,6 +193,9 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 
 			if(setting_gammaWeightsPixelSelect==1 && HCalib!=0)
 			{
+                /**
+                 * @brief 曝光矫正过后的梯度
+                 */
 				float gw = HCalib->getBGradOnly((float)(dI_l[idx][0]));
 				dabs_l[idx] *= gw*gw;	// convert to gradient of original color space (before removing response).
 			}

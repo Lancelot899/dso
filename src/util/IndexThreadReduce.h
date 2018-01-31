@@ -78,14 +78,6 @@ public:
 
 		memset(&stats, 0, sizeof(Running));
 
-//		if(!multiThreading)
-//		{
-//			callPerIndex(first, end, &stats, 0);
-//			return;
-//		}
-
-
-
 		if(stepSize == 0)
 			stepSize = ((end-first)+NUM_THREADS-1)/NUM_THREADS;
 
